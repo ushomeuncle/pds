@@ -1,0 +1,56 @@
+Transpose Matrix 
+
+
+include <stdio.h>
+
+const int N =2; // Matrix size (N x N)
+const int BLOCK_SIZE = 2; // Block size (BLOCK_SIZE x BLOCK_SIZE)
+void initMatrix(int* matrix, int size) {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            matrix[i * size + j] = i * size + j;
+        }
+    }
+}
+void printMatrix(int* matrix, int size) {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            printf("%d\t", matrix[i * size + j]);
+        }
+        printf("\n");
+    }
+}
+_global_ void transposeMatrix(int* input, int* output) {
+    _shared_ int tile[BLOCK_SIZE][BLOCK_SIZE];     
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;    
+     tile[threadIdx.y][threadIdx.x] = input[row * N + col];
+        __syncthreads(); 
+    int newRow = blockIdx.x * blockDim.x + threadIdx.y;
+    int newCol = blockIdx.y * blockDim.y + threadIdx.x;
+    output[newRow * N + newCol] = tile[threadIdx.x][threadIdx.y];
+}
+
+int main() {
+    int* h_inputMatrix = (int*)malloc(N * N * sizeof(int));  // Host input matrix
+    int* h_outputMatrix = (int*)malloc(N * N * sizeof(int)); // Host output matrix
+    initMatrix(h_inputMatrix, N);
+    int* d_inputMatrix;
+    int* d_outputMatrix;   
+    cudaMalloc((void**)&d_inputMatrix, N * N * sizeof(int));
+    cudaMalloc((void**)&d_outputMatrix, N * N * sizeof(int));
+    cudaMemcpy(d_inputMatrix, h_inputMatrix, N * N * sizeof(int), cudaMemcpyHostToDevice);
+       dim3 grid(N / BLOCK_SIZE, N / BLOCK_SIZE); // (2x2) thread blocks
+    dim3 block(BLOCK_SIZE, BLOCK_SIZE); // Single thread
+     transposeMatrix<<<grid, block>>>(d_inputMatrix, d_outputMatrix);
+     cudaMemcpy(h_outputMatrix, d_outputMatrix, N * N * sizeof(int), cudaMemcpyDeviceToHost);
+      printf("Original Matrix:\n");
+    printMatrix(h_inputMatrix, N);
+    printf("\nTransposed Matrix:\n");
+    printMatrix(h_outputMatrix, N);
+    free(h_inputMatrix);
+    free(h_outputMatrix);
+    cudaFree(d_inputMatrix);
+    cudaFree(d_outputMatrix);
+     return 0;
+}

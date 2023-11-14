@@ -1,0 +1,51 @@
+%%cu
+//constant memory included
+#include <stdio.h>
+#include <stdlib.h>
+#include <cuda_runtime.h>
+#include <cuda.h>
+#define ARRAY_SIZE 8
+#define STENCIL_RADIUS 2
+_constant_ int STENCIL_KERNEL[2 * STENCIL_RADIUS + 1]; // Define
+constant memory for the stencil kernel
+_global_ void stencilOperation(const int inputArray[], int
+outputArray[]) {
+int tid = blockIdx.x * blockDim.x + threadIdx.x;
+if (tid < ARRAY_SIZE) {
+int sum = 0;
+for (int j = -STENCIL_RADIUS; j <= STENCIL_RADIUS; j++) {
+if (tid + j >= 0 && tid + j < ARRAY_SIZE) {
+sum += inputArray[tid + j] * STENCIL_KERNEL[j +
+STENCIL_RADIUS];
+}
+}
+outputArray[tid] = sum;
+}}
+int main() {
+int inputArray[ARRAY_SIZE];
+int outputArray[ARRAY_SIZE];
+int *d_inputArray, *d_outputArray;
+int specificInputArray[ARRAY_SIZE] = {5, 2, 1, 9, 2, 3, 6, 1};
+for (int i = 0; i < ARRAY_SIZE; i++) {
+inputArray[i] = specificInputArray[i];
+}
+// Initialize the stencil kernel in constant memory for a radius of 2
+int stencilKernel[2 * STENCIL_RADIUS + 1] = {1, 1, 1, 1, 1}; //
+Adjusted stencil kernel
+cudaMemcpyToSymbol(STENCIL_KERNEL, stencilKernel, (2 * STENCIL_RADIUS
++ 1) * sizeof(int));
+cudaMalloc((void**)&d_inputArray, ARRAY_SIZE * sizeof(int));
+cudaMalloc((void**)&d_outputArray, ARRAY_SIZE * sizeof(int));
+cudaMemcpy(d_inputArray, inputArray, ARRAY_SIZE * sizeof(int),
+cudaMemcpyHostToDevice);
+dim3 blockDim(256);
+dim3 gridDim((ARRAY_SIZE + blockDim.x - 1) / blockDim.x);
+stencilOperation<<<gridDim, blockDim>>>(d_inputArray, d_outputArray);
+cudaMemcpy(outputArray, d_outputArray, ARRAY_SIZE * sizeof(int),
+cudaMemcpyDeviceToHost);
+for (int i = 0; i < ARRAY_SIZE; i++) {
+printf("%d ", outputArray[i]);
+}
+printf("\n");
+cudaFree(d_inputArray);
+cudaFree(d_outputArray);
