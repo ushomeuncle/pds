@@ -1,0 +1,61 @@
+Quick sort
+#include <stdio.h>
+_global_ void partition(int arr[],int pos[])
+{
+int size=10;
+int x=threadIdx.x;
+int copy_arr[100];
+int pivot, left, right, t;
+for(int i=0;i < size;i++)
+{
+copy_arr[i] = arr[i];
+}
+t=copy_arr[x];
+copy_arr[x] = copy_arr[0];
+copy_arr[0] = t;
+pivot=copy_arr[0];
+left=1;
+right=size-1;
+while(left<right)
+{
+while(left>0 && left<size && copy_arr[left]<=pivot)
+left++;
+while(right>0 && right<size && copy_arr[right] > pivot)
+right--;
+if(left<right && left>0 && left<size && right>0 &&right<size)
+{
+t=copy_arr[left];
+copy_arr[left] = copy_arr[right];
+copy_arr[right] = t;
+}
+}
+pos[x]=right;
+}
+int main()
+{
+int size=10;
+int arr[10]={12,34,2,6,-3,-9,4,78,65,-34};
+int pos[size], fin[size];
+for(int i=0;i<size;i++)
+{
+fin[i] = 999999999;
+}
+int *dev_arr, *dev_pos;
+cudaMalloc((void**)&dev_arr,sizeof(int)*size);
+cudaMalloc((void**)&dev_pos,sizeof(int)*size);
+cudaMemcpy(dev_arr,&arr,size*sizeof(int),cudaMemcpyHostToDevice);
+cudaMemcpy(dev_pos,&pos,size*sizeof(int),cudaMemcpyHostToDevice);
+printf("Before sorting:\n");
+for(int i=0;i<size;i++)
+printf("%d\t",arr[i]);
+partition<<<1,size>>>(dev_arr,dev_pos);
+cudaMemcpy(&pos,dev_pos,size*sizeof(int),cudaMemcpyDeviceToHost);
+for(int i=0;i<size;i++)
+fin[pos[i]]=arr[i];
+for(int i=size-1;i>=0;i--)
+if(fin[i]==999999999)
+fin[i]=fin[i+1];
+printf("\n\nAfter sorting:\n");
+for(int i=0;i<size;i++)
+printf("%d\t",fin[i]);
+}
