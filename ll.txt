@@ -1,0 +1,13 @@
+1. Dot prdt
+2. Transpose
+3. 1d stencil
+4. preorder
+5. oddeven
+6. quicksort
+7. chatserver
+8. mutual
+9. broadcast, gather, scatter
+10. clock
+11. leader election
+12. byzantine
+a. group
